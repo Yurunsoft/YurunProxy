@@ -1,0 +1,15 @@
+{
+	"name": "YurunProxy",
+	"type": "project",
+    "require": {
+        "yurunsoft/yurun-http": "dev-master"
+    },
+    "config": {
+        "preferred-install": "dist"
+    },
+    "autoload": {
+        "psr-4" : {
+            "Yurun\\Proxy\\" : "src/"
+        }
+    }
+}
