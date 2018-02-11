@@ -24,9 +24,21 @@ class ServerUser
 
 	public function setDomain($domain)
 	{
+		foreach($domain as $tDomain)
+		{
+			if(!isset(Server::$option['domain'][$tDomain]) || !Server::$option['domain'][$tDomain]['enabled'])
+			{
+				$this->sendData(ServerAction::INIT_RESPONSE, [
+					'success'	=>	false,
+					'message'	=>	'Domain "' . $tDomain . '" not enabled in config.',
+				]);
+				return false;
+			}
+		}
 		$this->lock->lock();
 		$this->domain = $domain;
 		$this->lock->unlock();
+		return true;
 	}
 
 	public function addHttpRequest($id, $request, $response)
@@ -48,34 +60,57 @@ class ServerUser
 				];
 			}
 		}
-		$this->httpServer->send($this->fd, json_encode([
-			'a'			=>	ServerAction::RECEIVE_HTTP_REQUEST,
+		$this->sendData(ServerAction::RECEIVE_HTTP_REQUEST, [
 			'id'		=>	$id,
 			'request'	=>	$request,
 			'files'		=>	$files,
-		]) . "\r\n");
+		]);
 	}
 
 	public function parseHttpResponse($data)
 	{
 		if(isset($this->requests[$data['id']]))
 		{
+			$this->decryptData($data);
 			$response = $this->requests[$data['id']]['response'];
-			foreach($data['header'] as $name => $value)
+			if(null === $data['data'])
 			{
-				if(!in_array($name, ['Content-Encoding', 'Transfer-Encoding']))
+				$response->end('Client Error!');
+			}
+			else
+			{
+				foreach($data['data']['header'] as $name => $value)
 				{
-					$response->header($name, $value);
+					if(!in_array($name, ['Content-Encoding', 'Transfer-Encoding']))
+					{
+						$response->header($name, $value);
+					}
 				}
+				if(isset($data['data']['header']['Content-Encoding']))
+				{
+					$response->gzip(5);
+				}
+				$response->end(gzuncompress(base64_decode($data['data']['response'])));
 			}
-			if(isset($data['header']['Content-Encoding']))
-			{
-				$response->gzip(5);
-			}
-			$response->end(gzuncompress(base64_decode($data['response'])));
 			$this->lock->lock();
 			unset($this->requests[$data['id']]);
 			$this->lock->unlock();
 		}
+	}
+
+	public function sendData($action, $data = [])
+	{
+		$data = [
+			'a'		=>	$action,
+			'data'	=>	$data,
+		];
+		$data = \json_encode($data) . "\r\n";
+		$this->httpServer->send($this->fd, $data);
+	}
+
+	public function decryptData(&$data)
+	{
+		list($domain, ) = explode(':', $this->requests[$data['id']]['request']->header['host']);
+		$data['data'] = json_decode(\Yurun\Proxy\Encrypt\AES::decrypt(gzuncompress(base64_decode($data['data'])), Server::$option['domain'][$domain]['key']), true);
 	}
 }

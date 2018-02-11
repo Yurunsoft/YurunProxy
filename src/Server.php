@@ -1,10 +1,8 @@
 <?php
 namespace Yurun\Proxy;
 
-class Server
+class Server extends Base
 {
-	private $option;
-
 	private $httpServer;
 	
 	private $listenServer;
@@ -13,23 +11,24 @@ class Server
 
 	public function __construct($option)
 	{
-		$this->option = $option;
+		parent::__construct();
+		static::$option = $option;
 	}
 
 	public function start()
 	{
 		//创建Server对象，监听端口
-		$this->httpServer = new \swoole_http_server($this->option['web']['ip'], $this->option['web']['port']);
+		$this->httpServer = new \swoole_http_server(static::$option['web']['ip'], static::$option['web']['port']);
 
 		$this->httpServer->set([
-			'upload_tmp_dir'	=>	'/' === substr($this->option['upload_tmp_dir'], 0, 1) ? $this->option['upload_tmp_dir'] : dirname(__DIR__) . '/' . $this->option['upload_tmp_dir'],
+			'upload_tmp_dir'	=>	'/' === substr(static::$option['upload_tmp_dir'], 0, 1) ? static::$option['upload_tmp_dir'] : dirname(__DIR__) . '/' . static::$option['upload_tmp_dir'],
 		]);
 
 		$this->httpServer->on('request', function($request, $response){
 			$this->parser->request($request, $response);
 		});
 
-		$this->listenServer = $this->httpServer->listen($this->option['listen']['ip'], $this->option['listen']['port'], SWOOLE_SOCK_TCP);
+		$this->listenServer = $this->httpServer->listen(static::$option['listen']['ip'], static::$option['listen']['port'], SWOOLE_SOCK_TCP);
 		$this->listenServer->set(array(
 			'open_eof_check'	=>	true,
 			'package_eof' 		=> "\r\n",

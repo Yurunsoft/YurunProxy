@@ -5,8 +5,10 @@ class ServerAction
 {
 	const INIT = 1;
 
-	const RECEIVE_HTTP_REQUEST = 2;
+	const INIT_RESPONSE = 2;
 
-	const RECEIVE_HTTP_RESPONSE = 3;
+	const RECEIVE_HTTP_REQUEST = 3;
+
+	const RECEIVE_HTTP_RESPONSE = 4;
 
 }

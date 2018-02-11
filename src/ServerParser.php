@@ -24,23 +24,25 @@ class ServerParser
 
 	public function receive($serv, $fd, $from_id, $data)
 	{
-		$data = json_decode(gzuncompress(substr($data, 0, -2)), true);
+		$data = json_decode(\Yurun\Proxy\Encrypt\AES::decrypt(gzuncompress(substr($data, 0, -2)), Server::$option['listen']['key']), true);
 		switch($data['a'])
 		{
 			case ServerAction::INIT:
-				$this->lock->lock();
+				$data['data'] = json_decode(gzuncompress(base64_decode($data['data'])), true);
 				$user = new ServerUser($fd, $this->httpServer);
-				$this->userList[$fd] = $user;
-				foreach($data['domain'] as $domain)
+				if($user->setDomain($data['data']['domain']))
 				{
-					$this->domainUserRelation[$domain] = $user;
+					$this->lock->lock();
+					$this->userList[$fd] = $user;
+					foreach($data['data']['domain'] as $domain)
+					{
+						$this->domainUserRelation[$domain] = $user;
+					}
+					$this->lock->unlock();
+					echo 'user_count:', count($this->userList), PHP_EOL;
 				}
-				$this->lock->unlock();
-				$user->setDomain($data['domain']);
-				echo 'user_count:', count($this->userList), PHP_EOL;
 				break;
 			case ServerAction::RECEIVE_HTTP_RESPONSE:
-				// echo 'http_response:', json_encode($data), PHP_EOL;
 				$this->userList[$fd]->parseHttpResponse($data);
 				break;
 		}
@@ -66,8 +68,6 @@ class ServerParser
 
 	public function request($request, $response)
 	{
-		echo 'request', PHP_EOL;
-		// var_dump($request, $response);
 		list($domain, ) = explode(':', $request->header['host']);
 		if(isset($this->domainUserRelation[$domain]))
 		{
@@ -79,4 +79,5 @@ class ServerParser
 			$response->end('area you ok?');
 		}
 	}
+
 }
