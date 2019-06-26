@@ -4,7 +4,7 @@ namespace Yurun\Proxy;
 class Server extends Base
 {
 	private $httpServer;
-	
+
 	private $listenServer;
 
 	private $parser;
@@ -22,6 +22,7 @@ class Server extends Base
 
 		$this->httpServer->set([
 			'upload_tmp_dir'	=>	'/' === substr(static::$option['upload_tmp_dir'], 0, 1) ? static::$option['upload_tmp_dir'] : dirname(__DIR__) . '/' . static::$option['upload_tmp_dir'],
+			'http_gzip_level' => 5,
 		]);
 
 		$this->httpServer->on('request', function($request, $response){

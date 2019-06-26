@@ -14,7 +14,7 @@ class ServerUser
 	public $domain;
 
 	public $requests = [];
-	
+
 	public function __construct($fd, $httpServer)
 	{
 		$this->fd = $fd;
@@ -85,10 +85,6 @@ class ServerUser
 					{
 						$response->header($name, $value);
 					}
-				}
-				if(isset($data['data']['header']['Content-Encoding']))
-				{
-					$response->gzip(5);
 				}
 				$response->end(gzuncompress(base64_decode($data['data']['response'])));
 			}
